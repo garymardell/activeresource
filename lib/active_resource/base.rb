@@ -294,34 +294,9 @@ module ActiveResource
     class_attribute :include_format_in_path
     self.include_format_in_path = true
 
-   class << self
+    class << self
 
-      def self.protected_threadlocal_attr_accessor(*attrs)
-        attrs.each do |attr|
-          getter = "_#{attr}"
-          setter = "_#{attr}="
-          query = "_#{attr}?"
-          define_method getter do
-            Thread.current["active.resource.#{attr}.#{self.object_id}"]
-          end
-          define_method setter do |value|
-            Thread.current["active.resource.#{attr}.#{self.object_id}.defined"] = true
-            Thread.current["active.resource.#{attr}.#{self.object_id}"] = value
-          end
-          define_method query do
-            Thread.current.key?("active.resource.#{attr}.#{self.object_id}.defined")
-          end
-          protected getter.to_sym
-          protected setter.to_sym
-        end
-      end
-      protected_threadlocal_attr_accessor :headers
-      protected_threadlocal_attr_accessor :connection
-      protected_threadlocal_attr_accessor :user
-      protected_threadlocal_attr_accessor :password
-      protected_threadlocal_attr_accessor :site
-
-       # Creates a schema for this resource - setting the attributes that are
+      # Creates a schema for this resource - setting the attributes that are
       # known prior to fetching an instance from the remote system.
       #
       # The schema helps define the set of <tt>known_attributes</tt> of the
@@ -457,7 +432,7 @@ module ActiveResource
         #   Subclass.site # => 'https://anonymous@test.com'
         #   Subclass.site.user = 'david' # => TypeError: can't modify frozen object
         #
-        if _site?
+        if _site_defined?
           _site
         elsif superclass != Object && superclass.site
           superclass.site.dup.freeze
@@ -496,7 +471,7 @@ module ActiveResource
       # Gets the \user for REST HTTP authentication.
       def user
         # Not using superclass_delegating_reader. See +site+ for explanation
-        if _user?
+        if _user_defined?
           _user
         elsif superclass != Object && superclass.user
           superclass.user.dup.freeze
@@ -512,7 +487,7 @@ module ActiveResource
       # Gets the \password for REST HTTP authentication.
       def password
         # Not using superclass_delegating_reader. See +site+ for explanation
-        if _password?
+        if _password_defined?
           _password
         elsif superclass != Object && superclass.password
           superclass.password.dup.freeze
@@ -612,7 +587,7 @@ module ActiveResource
       # The +refresh+ parameter toggles whether or not the \connection is refreshed at every request
       # or not (defaults to <tt>false</tt>).
       def connection(refresh = false)
-        if _connection? || superclass == Object
+        if _connection_defined? || superclass == Object
           self._connection = Connection.new(site, format) if refresh || _connection.nil?
           _connection.proxy = proxy if proxy
           _connection.user = user if user
@@ -966,6 +941,68 @@ module ActiveResource
       rescue ActiveResource::ResourceNotFound, ActiveResource::ResourceGone
         false
       end
+
+      protected
+
+        def _headers
+          Thread.current["active.resource.headers.#{self.object_id}"]
+        end
+
+        def _headers=(value)
+          Thread.current["active.resource.headers.#{self.object_id}"] = value
+        end
+
+        def _connection
+          Thread.current["active.resource.connection.#{self.object_id}"]
+        end
+
+        def _connection=(value)
+          Thread.current["active.resource.connection.#{self.object_id}.defined"] = true
+          Thread.current["active.resource.connection.#{self.object_id}"] = value
+        end
+
+        def _connection_defined?
+          Thread.current.key?("active.resource.connection.#{self.object_id}.defined")
+        end
+
+        def _user
+          Thread.current["active.resource.user.#{self.object_id}"]
+        end
+
+        def _user=(value)
+          Thread.current["active.resource.user.#{self.object_id}.defined"] = true
+          Thread.current["active.resource.user.#{self.object_id}"] = value
+        end
+
+        def _user_defined?
+          Thread.current.key?("active.resource.user.#{self.object_id}.defined")
+        end
+
+        def _password
+          Thread.current["active.resource.password.#{self.object_id}"]
+        end
+
+        def _password=(value)
+          Thread.current["active.resource.password.#{self.object_id}.defined"] = true
+          Thread.current["active.resource.password.#{self.object_id}"] = value
+        end
+
+        def _password_defined?
+          Thread.current.key?("active.resource.password.#{self.object_id}.defined")
+        end
+
+        def _site
+          Thread.current["active.resource.site.#{self.object_id}"]
+        end
+
+        def _site=(value)
+          Thread.current["active.resource.site.#{self.object_id}.defined"] = true
+          Thread.current["active.resource.site.#{self.object_id}"] = value
+        end
+
+        def _site_defined?
+          Thread.current.key?("active.resource.site.#{self.object_id}.defined")
+        end
 
       private
 
